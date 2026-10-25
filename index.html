@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Deye Inverter — Домашня енергосистема</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Фонові світлові ефекти -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="app-container">
+    <!-- Шапка сторінки -->
+    <header class="header">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span class="brand-name">DEYE</span>
+            <span class="brand-model">SUN-5K-SG03LP1-EU</span>
+          </div>
+          <div class="brand-subtitle">Домашня гібридна енергосистема</div>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <div class="clock-widget">
+          <div class="clock-time" id="clockTime">12:00:00</div>
+          <div class="clock-date" id="clockDate">Четвер, 22 жовтня 2026</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="bms-status">
+          <span class="status-dot pulse-green" id="bmsDot"></span>
+          <span class="bms-text">BMS: CAN OK</span>
+        </div>
+
+        <button class="sound-toggle-btn" id="soundToggleBtn" title="Звукові сповіщення">
+          <svg id="soundIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="soundIconOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <!-- Перемикач симуляції мережі -->
+        <div class="sim-switch-wrapper">
+          <button class="sim-switch-btn" id="gridToggleBtn" aria-label="Симуляція відключення мережі">
+            <span class="switch-slider"></span>
+            <span class="switch-content">
+              <span class="switch-icon">⚡</span>
+              <span class="switch-text" id="gridSwitchText">Мережа: В нормі</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 1. Головний баннер статусу мережі та прогнозу роботи -->
+    <section class="network-banner" id="networkBanner">
+      <div class="banner-main-status">
+        <div class="status-indicator-badge" id="statusBadge">
+          <span class="radar-ping" id="radarPing"></span>
+          <span class="status-icon" id="statusIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </span>
+          <div class="status-text-group">
+            <div class="status-headline" id="gridHeadline">МЕРЕЖА: ОНЛАЙН (230V)</div>
+            <div class="status-subtext" id="gridSubtext">Живлення будинку від зовнішньої мережі • Батарея в буферному режимі</div>
+          </div>
+        </div>
+
+        <div class="status-mode-tag" id="modeTag">
+          <span class="mode-bullet"></span>
+          <span id="modeTagText">РЕЖИМ: МЕРЕЖЕВИЙ (BYPASS)</span>
+        </div>
+      </div>
+
+      <div class="banner-divider"></div>
+
+      <div class="banner-runtime">
+        <div class="runtime-caption">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>РОЗРАХУНКОВИЙ ЧАС РОБОТИ ВІД АКБ</span>
+        </div>
+        <div class="runtime-value" id="runtimeValue">
+          Залишилось: <span class="highlight" id="runtimeHighlight">~6 год 40 хв</span>
+        </div>
+        <div class="runtime-sub" id="runtimeSub">
+          При поточному навантаженні <strong id="runtimeLoadRef">520 W</strong> (ємність 5.12 кВт·год, буфер 15%)
+        </div>
+      </div>
+    </section>
+
+    <!-- Схема потоків енергії (Power Flow) -->
+    <section class="power-flow-section">
+      <div class="flow-card">
+        <div class="flow-header">
+          <span class="flow-title">Потоки енергії в реальному часі</span>
+          <span class="flow-badge" id="inverterEfficiency">ККД Інвертора: 97.6%</span>
+        </div>
+        <div class="flow-diagram">
+          <!-- Вузол: Мережа -->
+          <div class="flow-node" id="nodeGrid">
+            <div class="node-icon grid-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+              </svg>
+            </div>
+            <div class="node-label">Зовнішня мережа</div>
+            <div class="node-val" id="flowGridVal">520 W</div>
+          </div>
+
+          <!-- Лінія Мережа -> Інвертор -->
+          <div class="flow-line-wrap flow-line-left">
+            <div class="flow-line" id="lineGridToInv">
+              <span class="flow-particles active"></span>
+            </div>
+          </div>
+
+          <!-- Центральний вузол: Інвертор Deye -->
+          <div class="flow-node center-node" id="nodeInverter">
+            <div class="node-icon deye-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <line x1="7" y1="8" x2="17" y2="8"></line>
+                <line x1="7" y1="12" x2="17" y2="12"></line>
+                <line x1="7" y1="16" x2="13" y2="16"></line>
+              </svg>
+            </div>
+            <div class="node-label">Інвертор Deye</div>
+            <div class="node-val highlight-val" id="flowInverterVal">520 W</div>
+          </div>
+
+          <!-- Лінія Інвертор -> Будинок -->
+          <div class="flow-line-wrap flow-line-right">
+            <div class="flow-line" id="lineInvToHome">
+              <span class="flow-particles active"></span>
+            </div>
+          </div>
+
+          <!-- Вузол: Будинок / Навантаження -->
+          <div class="flow-node" id="nodeHome">
+            <div class="node-icon home-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </div>
+            <div class="node-label">Споживачі</div>
+            <div class="node-val" id="flowHomeVal">520 W</div>
+          </div>
+
+          <!-- Лінія Інвертор <-> Батарея (вертикальна) -->
+          <div class="flow-line-wrap flow-line-bottom">
+            <div class="flow-line flow-line-vert" id="lineInvToBat">
+              <span class="flow-particles" id="batParticles"></span>
+            </div>
+          </div>
+
+          <!-- Вузол: Батарея (внизу) -->
+          <div class="flow-node bottom-node" id="nodeBattery">
+            <div class="node-icon bat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="16" height="12" rx="2"></rect>
+                <line x1="20" y1="11" x2="20" y2="15"></line>
+              </svg>
+            </div>
+            <div class="node-label">LiFePO4 5.12 kWh</div>
+            <div class="node-val" id="flowBatVal">Буфер (0 W)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Картки ключових параметрів інвертора -->
+    <section class="cards-grid">
+      <!-- Картка 1: Заряд батареї (SoC) -->
+      <article class="metric-card card-battery" id="cardBattery">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon-badge battery-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="16" height="12" rx="2"></rect>
+                <line x1="20" y1="11" x2="20" y2="15"></line>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title">Заряд батареї (SoC)</h2>
+              <span class="card-subtitle">LiFePO4 48V 100Ah • 16S BMS</span>
+            </div>
+          </div>
+          <span class="card-pill pill-normal" id="batteryStatePill">Буфер</span>
+        </div>
+
+        <div class="card-main-metric">
+          <div class="battery-dial-container">
+            <svg class="battery-circular-gauge" viewBox="0 0 120 120">
+              <circle class="gauge-bg" cx="60" cy="60" r="50" />
+              <circle class="gauge-fill" id="batteryGaugeFill" cx="60" cy="60" r="50" />
+            </svg>
+            <div class="gauge-center-text">
+              <span class="big-percent" id="batterySocText">87<span class="unit">%</span></span>
+              <span class="gauge-state-text" id="batteryVoltsText">51.8 V</span>
+            </div>
+          </div>
+
+          <div class="battery-details">
+            <div class="meter-bar-container">
+              <div class="meter-bar-track">
+                <div class="meter-bar-fill" id="batteryBarFill" style="width: 87%;"></div>
+              </div>
+              <div class="meter-ticks">
+                <span>0%</span>
+                <span>25%</span>
+                <span>50%</span>
+                <span>75%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            <div class="data-mini-grid">
+              <div class="data-mini-item">
+                <span class="mini-label">Потужність АКБ</span>
+                <span class="mini-value" id="batteryPowerText">+0 W</span>
+              </div>
+              <div class="data-mini-item">
+                <span class="mini-label">Струм заряду/розряду</span>
+                <span class="mini-value" id="batteryCurrentText">0.0 A</span>
+              </div>
+              <div class="data-mini-item">
+                <span class="mini-label">Температура комірок</span>
+                <span class="mini-value" id="batteryTempText">24.2 °C</span>
+              </div>
+              <div class="data-mini-item">
+                <span class="mini-label">Здоров'я (SOH)</span>
+                <span class="mini-value color-green">99.4%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Картка 2: Поточне споживання -->
+      <article class="metric-card card-load" id="cardLoad">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon-badge load-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title">Поточне споживання</h2>
+              <span class="card-subtitle">Навантаження будинку (LOAD порт)</span>
+            </div>
+          </div>
+          <span class="card-pill pill-blue" id="loadStatusPill">Звичайне</span>
+        </div>
+
+        <div class="card-main-metric vertical-stack">
+          <div class="large-value-display">
+            <span class="value-number" id="homeLoadPower">520</span>
+            <span class="value-unit">W</span>
+          </div>
+
+          <div class="load-sparkline-wrap">
+            <div class="sparkline-bar-group" id="sparklineBars">
+              <!-- Динамічно заповнюється в app.js -->
+            </div>
+            <div class="sparkline-sub">Активність навантажень (останні 12 вимірів)</div>
+          </div>
+
+          <div class="data-mini-grid">
+            <div class="data-mini-item">
+              <span class="mini-label">Струм споживання</span>
+              <span class="mini-value" id="homeLoadCurrent">2.28 A</span>
+            </div>
+            <div class="data-mini-item">
+              <span class="mini-label">Пік за сьогодні</span>
+              <span class="mini-value" id="homePeakLoad">2 840 W</span>
+            </div>
+            <div class="data-mini-item">
+              <span class="mini-label">Коеф. потужності</span>
+              <span class="mini-value">0.96 PF</span>
+            </div>
+            <div class="data-mini-item">
+              <span class="mini-label">Напруга UPS</span>
+              <span class="mini-value" id="homeUpsVoltage">230.1 V</span>
+            </div>
+          </div>
+
+          <!-- Швидкі симулятори навантажень -->
+          <div class="quick-load-controls">
+            <span class="quick-label">Тест електроприладів:</span>
+            <div class="load-buttons-group">
+              <button class="load-btn" data-device="fridge" id="btnFridge">+ Холодильник (150W)</button>
+              <button class="load-btn" data-device="kettle" id="btnKettle">+ Чайник (1.8 кВт)</button>
+              <button class="load-btn reset-btn" id="btnResetLoad">Сброс</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Картка 3: Напруга та частота мережі -->
+      <article class="metric-card card-grid" id="cardGrid">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon-badge grid-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M8 12a4 4 0 0 1 8 0"></path>
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title">Параметри зовнішньої мережі</h2>
+              <span class="card-subtitle">Ввід GRID • 1-фазна мережа</span>
+            </div>
+          </div>
+          <span class="card-pill pill-green" id="gridQualityPill">Стабільно</span>
+        </div>
+
+        <div class="card-main-metric grid-params-split">
+          <div class="param-half">
+            <span class="param-title">НАПРУГА МЕРЕЖІ</span>
+            <div class="param-big-val">
+              <span class="value-number" id="gridVolts">228</span>
+              <span class="value-unit">V</span>
+            </div>
+            <div class="param-status-bar">
+              <div class="param-gauge-bar" id="gridVoltsBar" style="width: 76%;"></div>
+            </div>
+            <span class="param-norm">Норма: 207 – 253 V</span>
+          </div>
+
+          <div class="param-half">
+            <span class="param-title">ЧАСТОТА МЕРЕЖІ</span>
+            <div class="param-big-val">
+              <span class="value-number" id="gridFreq">50.0</span>
+              <span class="value-unit">Hz</span>
+            </div>
+            <div class="param-status-bar">
+              <div class="param-gauge-bar" id="gridFreqBar" style="width: 80%;"></div>
+            </div>
+            <span class="param-norm">Норма: 49.5 – 50.5 Hz</span>
+          </div>
+        </div>
+
+        <div class="grid-card-footer">
+          <div class="grid-info-row">
+            <span class="info-label">Стан реле вводу:</span>
+            <span class="info-val" id="gridRelayState">Замкнуто (Підключено)</span>
+          </div>
+          <div class="grid-info-row">
+            <span class="info-label">Втрати фази:</span>
+            <span class="info-val" id="gridPhaseLoss">Немає (0 помилок)</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Картка 4: Спожито за сьогодні -->
+      <article class="metric-card card-energy" id="cardEnergy">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon-badge energy-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 20v-6M6 20V10M18 20V4"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title">Енергобаланс за сьогодні</h2>
+              <span class="card-subtitle">Статистика лічильників інвертора</span>
+            </div>
+          </div>
+          <span class="card-pill pill-violet">Лічильник активний</span>
+        </div>
+
+        <div class="card-main-metric energy-details-stack">
+          <!-- Від мережі -->
+          <div class="energy-row">
+            <div class="energy-row-info">
+              <div class="energy-icon-bullet grid-bullet"></div>
+              <div>
+                <div class="energy-row-title">Спожито від мережі</div>
+                <div class="energy-row-desc">Імпорт з міської електромережі</div>
+              </div>
+            </div>
+            <div class="energy-row-val">
+              <span class="energy-num" id="energyGridToday">4.82</span>
+              <span class="energy-unit">кВт·год</span>
+            </div>
+          </div>
+
+          <!-- Від батареї -->
+          <div class="energy-row">
+            <div class="energy-row-info">
+              <div class="energy-icon-bullet bat-bullet"></div>
+              <div>
+                <div class="energy-row-title">Віддано акумулятором</div>
+                <div class="energy-row-desc">Витрата під час знеструмлень</div>
+              </div>
+            </div>
+            <div class="energy-row-val">
+              <span class="energy-num" id="energyBatToday">1.45</span>
+              <span class="energy-unit">кВт·год</span>
+            </div>
+          </div>
+
+          <!-- Разом будинок -->
+          <div class="energy-row total-row">
+            <div class="energy-row-info">
+              <div class="energy-icon-bullet home-bullet"></div>
+              <div>
+                <div class="energy-row-title">Всього витрачено будинком</div>
+                <div class="energy-row-desc">Сумарне навантаження за добу</div>
+              </div>
+            </div>
+            <div class="energy-row-val">
+              <span class="energy-num highlight-num" id="energyTotalToday">6.27</span>
+              <span class="energy-unit">кВт·год</span>
+            </div>
+          </div>
+
+          <!-- Прогрес співвідношення джерел -->
+          <div class="energy-ratio-bar">
+            <div class="ratio-segment ratio-grid" id="ratioGridBar" style="width: 77%;" title="Мережа: 77%"></div>
+            <div class="ratio-segment ratio-bat" id="ratioBatBar" style="width: 23%;" title="Батарея: 23%"></div>
+          </div>
+          <div class="ratio-legend">
+            <span class="legend-item"><span class="legend-color grid-bg"></span> Мережа: <strong id="ratioGridPercent">77%</strong></span>
+            <span class="legend-item"><span class="legend-color bat-bg"></span> АКБ: <strong id="ratioBatPercent">23%</strong></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Блок: Графік відключень ДТЕК -->
+    <section class="dtek-schedule-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon dtek-icon-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div>
+            <h2 class="section-title">Графік стабілізаційних відключень ДТЕК</h2>
+            <div class="section-subtitle" id="dtekSubtitle">Черга №3 • Київ • Статус на сьогодні</div>
+          </div>
+        </div>
+
+        <div class="dtek-status-pill-wrap">
+          <span class="card-pill pill-green" id="dtekStatusPill">Світло є (за графіком)</span>
+        </div>
+      </div>
+
+      <!-- Погодинна шкала ДТЕК (00 - 23) -->
+      <div class="dtek-timeline-container">
+        <div class="dtek-hours-grid" id="dtekHoursGrid">
+          <!-- Заповнюється динамічно з app.js -->
+        </div>
+        <div class="dtek-legend">
+          <span class="dtek-leg-item"><span class="dtek-box box-yes"></span> Світло є</span>
+          <span class="dtek-leg-item"><span class="dtek-box box-maybe"></span> Можливе відключення</span>
+          <span class="dtek-leg-item"><span class="dtek-box box-no"></span> Відключення за графіком</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Журнал знеструмлень (Історія блек-аутів) -->
+    <section class="outage-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h2 class="section-title">Журнал знеструмлень електромережі</h2>
+            <div class="section-subtitle">Автоматична фіксація зникнення зовнішньої мережі та часу автономії</div>
+          </div>
+        </div>
+
+        <div class="outage-summary-stats">
+          <div class="summary-stat-badge">
+            <span class="stat-num" id="outageCountThisWeek">4</span>
+            <span class="stat-label">відключень за 30 днів</span>
+          </div>
+          <div class="summary-stat-badge">
+            <span class="stat-num" id="outageTotalHours">11 год 55 хв</span>
+            <span class="stat-label">сумарно на АКБ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Таблиця журналу -->
+      <div class="table-container">
+        <table class="outage-table">
+          <thead>
+            <tr>
+              <th>Статус</th>
+              <th>Дата</th>
+              <th>Час зникнення</th>
+              <th>Час відновлення</th>
+              <th>Тривалість</th>
+              <th>Витрата АКБ</th>
+            </tr>
+          </thead>
+          <tbody id="outageLogBody">
+            <!-- Записи генеруються динамічно через API -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Підвал -->
+    <footer class="footer">
+      <div class="footer-left">
+        <span>Deye Solar & Hybrid Inverter Dashboard • v3.0 PRO (Україна)</span>
+        <span class="footer-separator">•</span>
+        <span>Протокол: FastAPI / Modbus RTU / SQLite</span>
+      </div>
+      <div class="footer-right">
+        <span>Час оновлення даних: <strong id="lastUpdateTs">щойно</strong></span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Контейнер спливаючих push-сповіщень -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

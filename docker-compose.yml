@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  deye-monitor:
+    build: .
+    container_name: deye-energy-monitor
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - DEBUG=false
+      - DEMO_MODE=true
+      - TELEGRAM_NOTIFICATIONS_ENABLED=false
+      - DTEK_REGION=kiev
+      - DTEK_GROUP=3
+    volumes:
+      - ./energy_system.db:/app/energy_system.db
+    # If using physical Modbus RTU USB adapter (e.g., /dev/ttyUSB0), uncomment devices:
+    # devices:
+    #   - "/dev/ttyUSB0:/dev/ttyUSB0"
