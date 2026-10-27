@@ -17,6 +17,11 @@
     clockDate: document.getElementById('clockDate'),
     lastUpdateTs: document.getElementById('lastUpdateTs'),
 
+    inverterModelText: document.getElementById('inverterModelText'),
+    batteryCapacitySubtitle: document.getElementById('batteryCapacitySubtitle'),
+    batterySohText: document.getElementById('batterySohText'),
+    flowBatLabel: document.getElementById('flowBatLabel'),
+
     gridToggleBtn: document.getElementById('gridToggleBtn'),
     gridSwitchText: document.getElementById('gridSwitchText'),
     soundToggleBtn: document.getElementById('soundToggleBtn'),
@@ -228,7 +233,46 @@
   async function updateStatus() {
     try {
       const res = await fetch('/api/status');
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
       const data = await res.json();
+
+      // Перевірка наявності зв'язку
+      const isOnline = data.connected || data.demo_mode;
+      if (!isOnline) {
+        dom.gridHeadline.textContent = "НЕМАЄ ЗВ'ЯЗКУ З ІНВЕРТОРОМ";
+        dom.gridSubtext.textContent = "Modbus Offline • Перевірте IP-адресу, порт або увімкніть DEMO_MODE";
+        dom.modeTagText.textContent = "РЕЖИМ: ОФЛАЙН (NO SIGNAL)";
+        dom.runtimeHighlight.textContent = "—";
+        dom.flowGridVal.textContent = "0 W";
+        dom.flowInverterVal.textContent = "0 W";
+        dom.flowHomeVal.textContent = "0 W";
+        dom.flowBatVal.textContent = "Немає даних";
+        dom.batterySocText.innerHTML = `0<span class="unit">%</span>`;
+        dom.homeLoadPower.textContent = "0";
+        return;
+      }
+
+      // Динамічні параметри інвертора та батареї з бекенду
+      if (data.inverter_model && dom.inverterModelText) {
+        dom.inverterModelText.textContent = data.inverter_model;
+      }
+
+      const capWh = data.battery_capacity_wh || 5120;
+      const capKwh = (capWh / 1000).toFixed(2);
+      const capAh = data.battery_capacity_ah || 100;
+
+      if (dom.batteryCapacitySubtitle) {
+        dom.batteryCapacitySubtitle.textContent = `LiFePO4 48V ${capAh}Ah • ${capKwh} kWh`;
+      }
+      if (dom.flowBatLabel) {
+        dom.flowBatLabel.textContent = `LiFePO4 ${capKwh} kWh`;
+      }
+      if (data.battery_soh && dom.batterySohText) {
+        dom.batterySohText.textContent = `${data.battery_soh.toFixed(1)}%`;
+      }
 
       // Мережа
       const gridOnline = data.grid_online;
@@ -294,7 +338,7 @@
 
         dom.batteryStatePill.textContent = 'РОЗРЯД (UPS)';
         dom.batteryStatePill.className = 'card-pill pill-warning';
-        const dischargeCurrent = (data.current_load / data.battery_volts).toFixed(1);
+        const dischargeCurrent = (data.current_load / Math.max(1, data.battery_volts)).toFixed(1);
         dom.batteryPowerText.textContent = `-${data.current_load} W`;
         dom.batteryPowerText.className = 'mini-value color-amber';
         dom.batteryCurrentText.textContent = `-${dischargeCurrent} A`;
@@ -310,9 +354,12 @@
         dom.batParticles.className = 'flow-particles bat-discharging';
       }
 
-      // Час роботи
+      // Час роботи та підказка розрахункової ємності
       dom.runtimeHighlight.textContent = data.runtime;
-      dom.runtimeLoadRef.textContent = `${data.current_load} W`;
+      if (dom.runtimeLoadRef && dom.runtimeLoadRef.parentElement) {
+        dom.runtimeLoadRef.parentElement.innerHTML = `При поточному навантаженні <strong id="runtimeLoadRef">${data.current_load} W</strong> (ємність ${capKwh} кВт·год, буфер 15%)`;
+        dom.runtimeLoadRef = document.getElementById('runtimeLoadRef');
+      }
 
       // Батарея
       dom.batterySocText.innerHTML = `${Math.round(data.battery_soc)}<span class="unit">%</span>`;
@@ -352,7 +399,7 @@
       dom.energyBatToday.textContent = data.energy_bat_today.toFixed(2);
       dom.energyTotalToday.textContent = data.energy_total_today.toFixed(2);
 
-      const gridPct = Math.round((data.energy_grid_today / data.energy_total_today) * 100) || 75;
+      const gridPct = Math.round((data.energy_grid_today / (data.energy_total_today || 1)) * 100) || 75;
       const batPct = 100 - gridPct;
       dom.ratioGridBar.style.width = `${gridPct}%`;
       dom.ratioBatBar.style.width = `${batPct}%`;
@@ -460,4 +507,3 @@
     init();
   }
 })();
-

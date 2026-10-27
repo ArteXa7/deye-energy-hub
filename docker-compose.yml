@@ -13,7 +13,7 @@ services:
       - DEBUG=false
       - DEMO_MODE=true
       - TELEGRAM_NOTIFICATIONS_ENABLED=false
-      - DTEK_REGION=kiev
+      - DTEK_REGION=kyiv
       - DTEK_GROUP=3
     volumes:
       - ./energy_system.db:/app/energy_system.db

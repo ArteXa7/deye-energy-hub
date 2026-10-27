@@ -303,14 +303,15 @@
           <div class="form-group">
             <label>Регіон ДТЕК</label>
             <select id="set_dtek_region" class="form-input">
-              <option value="kiev">м. Київ (YASNO)</option>
-              <option value="kiev_region">Київська область</option>
+              <option value="kyiv">м. Київ (YASNO)</option>
+              <option value="kyiv_region">Київська область</option>
               <option value="dnipro">Дніпропетровська область</option>
               <option value="odesa">Одеська область</option>
+              <option value="custom">Власний графік (Custom)</option>
             </select>
           </div>
-          <div class="form-group" style="margin-top: 14px;">
-            <label>Черга (Група відключень)</label>
+          <div class="form-group" id="dtekGroupContainer" style="margin-top: 14px;">
+            <label id="dtekGroupLabel">Черга (Група відключень)</label>
             <select id="set_dtek_group" class="form-input">
               <option value="1">Черга 1</option>
               <option value="2">Черга 2</option>
@@ -319,6 +320,15 @@
               <option value="5">Черга 5</option>
               <option value="6">Черга 6</option>
             </select>
+          </div>
+
+          <!-- Custom Schedule Editor Container -->
+          <div class="custom-schedule-section hidden" id="customScheduleSection">
+            <label style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Редагування власного 24-годинного розкладу</label>
+            <small class="form-hint" style="display: block; margin-top: 4px; margin-bottom: 12px;">
+              Клікніть на годину для перемикання статусу: Зелений (Світло є) ➔ Жовтий (Можливо) ➔ Червоний (Відключення).
+            </small>
+            <div class="custom-schedule-grid" id="customScheduleGrid"></div>
           </div>
         </div>
 
@@ -428,6 +438,75 @@
         tabContents: document.querySelectorAll('.settings-tab-content')
       };
 
+      // --- Custom Schedule Editor Initialization ---
+      const customGrid = document.getElementById('customScheduleGrid');
+      const customScheduleData = {}; // 0..23 -> "yes", "maybe", "no"
+      for (let h = 0; h < 24; h++) {
+        customScheduleData[h] = 'yes';
+        const cell = document.createElement('div');
+        cell.className = 'custom-hour-cell status-yes';
+        cell.dataset.hour = h;
+        cell.innerHTML = `
+          <span class="hour-label">${h.toString().padStart(2, '0')}:00</span>
+          <div class="hour-status-dot"></div>
+        `;
+        cell.addEventListener('click', () => {
+          const cur = customScheduleData[h];
+          let next = 'yes';
+          if (cur === 'yes') next = 'maybe';
+          else if (cur === 'maybe') next = 'no';
+          else if (cur === 'no') next = 'yes';
+
+          customScheduleData[h] = next;
+          cell.className = `custom-hour-cell status-${next}`;
+        });
+        customGrid.appendChild(cell);
+      }
+
+      function updateGroupOptions() {
+        const region = sDom.dtekRegion.value;
+        const groupSelect = sDom.dtekGroup;
+        const groupContainer = document.getElementById('dtekGroupContainer');
+        const customSection = document.getElementById('customScheduleSection');
+
+        if (region === 'custom') {
+          groupContainer.classList.add('hidden');
+          customSection.classList.remove('hidden');
+          return;
+        } else {
+          groupContainer.classList.remove('hidden');
+          customSection.classList.add('hidden');
+        }
+
+        const currentVal = groupSelect.value || '3';
+        groupSelect.innerHTML = '';
+
+        if (region === 'kyiv_region') {
+          const subs = ['1.1', '1.2', '2.1', '2.2', '3.1', '3.2', '4.1', '4.2', '5.1', '5.2', '6.1', '6.2'];
+          subs.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = `Підгрупа ${s}`;
+            groupSelect.appendChild(opt);
+          });
+        } else {
+          for (let i = 1; i <= 6; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `Черга ${i}`;
+            groupSelect.appendChild(opt);
+          }
+        }
+
+        if (Array.from(groupSelect.options).some(o => o.value === currentVal)) {
+          groupSelect.value = currentVal;
+        } else {
+          groupSelect.value = groupSelect.options[0].value;
+        }
+      }
+
+      sDom.dtekRegion.addEventListener('change', updateGroupOptions);
+
       function updateModbusTypeVisibility() {
         if (sDom.modbusType.value === 'tcp') {
           sDom.tcpRow.classList.remove('hidden');
@@ -454,8 +533,27 @@
           sDom.modbusHost.value = data.modbus_host || '192.168.1.100';
           sDom.modbusTcpPort.value = data.modbus_tcp_port || '502';
           sDom.modbusPort.value = data.modbus_port || 'COM3';
-          sDom.dtekRegion.value = data.dtek_region || 'kiev';
+          sDom.dtekRegion.value = data.dtek_region || 'kyiv';
+          updateGroupOptions();
           sDom.dtekGroup.value = data.dtek_group || '3';
+
+          if (data.custom_dtek_schedule) {
+            try {
+              const parsed = JSON.parse(data.custom_dtek_schedule);
+              for (let h = 0; h < 24; h++) {
+                if (parsed[h]) {
+                  customScheduleData[h] = parsed[h];
+                  const cell = customGrid.querySelector(`[data-hour="${h}"]`);
+                  if (cell) {
+                    cell.className = `custom-hour-cell status-${parsed[h]}`;
+                  }
+                }
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          }
+
           sDom.telegramEnabled.checked = (data.telegram_notifications_enabled === 'True' || data.telegram_notifications_enabled === 'true');
           sDom.telegramToken.value = data.telegram_bot_token || '';
           sDom.telegramChatId.value = data.telegram_chat_id || '';
@@ -536,6 +634,7 @@
             modbus_port: sDom.modbusPort.value,
             dtek_region: sDom.dtekRegion.value,
             dtek_group: sDom.dtekGroup.value,
+            custom_dtek_schedule: JSON.stringify(customScheduleData),
             telegram_notifications_enabled: sDom.telegramEnabled.checked ? 'True' : 'False',
             telegram_bot_token: sDom.telegramToken.value,
             telegram_chat_id: sDom.telegramChatId.value,

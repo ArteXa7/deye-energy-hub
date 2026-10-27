@@ -1,5 +1,5 @@
 """
-Фоновий колектор даних інвертора Deye (Modbus RTU / TCP / симуляція)
+Фоновий колектор даних інвертора ДЕЄ (Modbus RTU / TCP / симуляція)
 Моніторинг напруги мережі 230V, визначення блэкаутів та безпечний режим
 """
 
@@ -34,6 +34,14 @@ class DeyeCollector:
         self.running = False
         self.modbus_client = None
 
+        # Динамічні параметри інвертора та батареї (Modbus Telemetry)
+        self.inverter_model = "SUN-5K-SG03LP1-EU"
+        self.inverter_serial = "DEYE20260001"
+        self.battery_type = "LiFePO4 48V"
+        self.battery_capacity_ah = 100.0
+        self.battery_capacity_wh = float(config.BATTERY_CAPACITY_WH)
+        self.battery_soh = 100.0
+
         if config.DEMO_MODE:
             self._init_demo_defaults()
         elif config.MODBUS_ENABLED:
@@ -52,6 +60,14 @@ class DeyeCollector:
         self.energy_grid_today = 4.82
         self.energy_bat_today = 1.45
         self.peak_load = 2840.0
+
+        # Демо параметри інвертора та батареї
+        self.inverter_model = "SUN-6K-SG03LP1-EU"
+        self.inverter_serial = "DEYE-DEMO-9988"
+        self.battery_type = "LiFePO4 48V BMS (Pylontech)"
+        self.battery_capacity_ah = 100.0
+        self.battery_capacity_wh = 5120.0
+        self.battery_soh = 99.4
 
     def _init_modbus_client(self):
         """Ініціалізація клієнта Modbus без блокування потоку"""
@@ -111,7 +127,7 @@ class DeyeCollector:
         if load_w <= 10:
             return "> 24 год"
         usable_soc = max(0.0, soc - config.BATTERY_MIN_SOC)
-        usable_wh = (usable_soc / 100.0) * config.BATTERY_CAPACITY_WH
+        usable_wh = (usable_soc / 100.0) * self.battery_capacity_wh
         effective_hours = (usable_wh * 0.96) / load_w
 
         if effective_hours <= 0:
@@ -125,14 +141,15 @@ class DeyeCollector:
         return f"~{hours} год {minutes:02d} хв"
 
     async def read_hardware_registers(self) -> bool:
-        """Безпечне читання регістрів (read-only)"""
+        """Безпечне читання регістрів (read-only) з автовизначенням параметрів інвертора та BMS"""
         if config.DEMO_MODE or not config.MODBUS_ENABLED or not self.modbus_client:
             self.hardware_connected = False
             return False
 
         try:
-            # Читання регістрів у окремому потоці, щоб не блокувати async event loop
             loop = asyncio.get_running_loop()
+            
+            # Читання базових телеметричних регістрів (630-640)
             result = await loop.run_in_executor(
                 None,
                 lambda: self.modbus_client.read_holding_registers(
@@ -150,6 +167,40 @@ class DeyeCollector:
                 new_online = self.grid_volts > config.GRID_VOLTAGE_THRESHOLD
                 await self.check_grid_state_change(new_online)
                 self.hardware_connected = True
+
+                # Читання регістрів BMS / ємності (310-318) для автовизначення Ah, SOH з обробкою fallback
+                try:
+                    bms_result = await loop.run_in_executor(
+                        None,
+                        lambda: self.modbus_client.read_holding_registers(
+                            address=310,
+                            count=8,
+                            slave=config.MODBUS_SLAVE_ID
+                        )
+                    )
+                    if bms_result and not bms_result.isError():
+                        bms_regs = bms_result.registers
+                        raw_ah = bms_regs[2] if len(bms_regs) > 2 else 0
+                        raw_soh = bms_regs[4] if len(bms_regs) > 4 else 0
+
+                        if 10 <= raw_ah <= 2000:
+                            self.battery_capacity_ah = float(raw_ah)
+                            self.battery_capacity_wh = self.battery_capacity_ah * 51.2
+                        else:
+                            self.battery_capacity_wh = float(config.BATTERY_CAPACITY_WH)
+                            self.battery_capacity_ah = self.battery_capacity_wh / 51.2
+
+                        if 10 <= raw_soh <= 100:
+                            self.battery_soh = float(raw_soh)
+                        else:
+                            self.battery_soh = 100.0
+                    else:
+                        self.battery_capacity_wh = float(config.BATTERY_CAPACITY_WH)
+                        self.battery_capacity_ah = self.battery_capacity_wh / 51.2
+                except Exception:
+                    self.battery_capacity_wh = float(config.BATTERY_CAPACITY_WH)
+                    self.battery_capacity_ah = self.battery_capacity_wh / 51.2
+
                 return True
             else:
                 self.hardware_connected = False
@@ -179,7 +230,7 @@ class DeyeCollector:
                 self.battery_soc = min(100.0, self.battery_soc + 0.02)
                 self.low_battery_notified = False
         else:
-            drain = (current_load * (config.POLL_INTERVAL / 3600.0)) / config.BATTERY_CAPACITY_WH * 100.0
+            drain = (current_load * (config.POLL_INTERVAL / 3600.0)) / self.battery_capacity_wh * 100.0
             self.battery_soc = max(10.0, self.battery_soc - drain)
             self.battery_volts = 49.2 + (self.battery_soc / 100.0) * 4.4
             self.battery_temp = min(34.0, self.battery_temp + 0.01)
@@ -225,7 +276,7 @@ class DeyeCollector:
         return self.grid_online
 
     def get_current_metrics(self) -> Dict[str, Any]:
-        """Формує словник метрик з обов'язковим статусом зв'язку"""
+        """Формує словник метрик з розширеними параметрами інвертора та батареї"""
         current_load = int(self.base_load + self.extra_load) if (self.hardware_connected or config.DEMO_MODE) else 0
         runtime_str = self.calculate_runtime(self.battery_soc, current_load)
         active_blackout = get_active_blackout()
@@ -241,6 +292,12 @@ class DeyeCollector:
             "demo_mode": config.DEMO_MODE,
             "connected": self.hardware_connected,
             "grid_online": self.grid_online,
+            "inverter_model": self.inverter_model,
+            "inverter_serial": self.inverter_serial,
+            "battery_type": self.battery_type,
+            "battery_capacity_ah": round(self.battery_capacity_ah, 1),
+            "battery_capacity_wh": round(self.battery_capacity_wh, 1),
+            "battery_soh": round(self.battery_soh, 1),
             "grid_volts": round(self.grid_volts, 1),
             "grid_freq": round(self.grid_freq, 2),
             "battery_soc": round(self.battery_soc, 1),

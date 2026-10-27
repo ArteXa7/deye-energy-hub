@@ -27,7 +27,7 @@ class Config:
     TELEGRAM_NOTIFICATIONS_ENABLED: bool = os.getenv("TELEGRAM_NOTIFICATIONS_ENABLED", "True").lower() in ("true", "1", "t")
 
     # ДТЕК налаштування
-    DTEK_REGION: str = os.getenv("DTEK_REGION", "kiev") # kiev, kiev_region, dnipro, odesa
+    DTEK_REGION: str = os.getenv("DTEK_REGION", "kyiv") # kyiv, kyiv_region, dnipro, odesa, custom
     DTEK_GROUP: str = os.getenv("DTEK_GROUP", "3")      # Черга/Група 1..6
 
     # Параметри акумулятора (LiFePO4)

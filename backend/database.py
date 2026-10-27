@@ -266,6 +266,7 @@ def init_default_settings():
         "modbus_slave_id": str(config.MODBUS_SLAVE_ID),
         "dtek_region": config.DTEK_REGION,
         "dtek_group": config.DTEK_GROUP,
+        "custom_dtek_schedule": json.dumps({str(h): "yes" for h in range(24)}),
         "telegram_bot_token": config.TELEGRAM_BOT_TOKEN,
         "telegram_chat_id": config.TELEGRAM_CHAT_ID,
         "telegram_notifications_enabled": str(config.TELEGRAM_NOTIFICATIONS_ENABLED),

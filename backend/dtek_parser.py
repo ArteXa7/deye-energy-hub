@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 import httpx
 
 from backend.config import config
-from backend.database import save_dtek_cache, get_dtek_cache
+from backend.database import save_dtek_cache, get_dtek_cache, get_setting
 
 
 class DtekScheduleManager:
@@ -24,18 +24,57 @@ class DtekScheduleManager:
         self.region = config.DTEK_REGION
         self.group = config.DTEK_GROUP
 
-    def generate_default_schedule_for_group(self, group_name: str, day_of_week: int) -> List[Dict[str, Any]]:
+    def generate_default_schedule_for_group(self, group_name: str, day_of_week: int) -> Dict[str, Any]:
         """
         Генерує офіційну матрицю графіків стабілізаційних відключень (4 години чергування).
+        Підтримує групи 1..6, підгрупи 1.1..6.2 для kyiv_region, та власний графік (custom).
         Статуси:
         - "yes": Світло гарантовано є (біла зона)
         - "no": Відключення за графіком (темно-сіра зона)
         - "maybe": Можливе відключення (світло-сіра / жовта зона)
         """
-        group_num = int(group_name) if group_name.isdigit() else 3
+        if self.region == "custom":
+            custom_json = get_setting("custom_dtek_schedule", "")
+            hourly = []
+            try:
+                data_dict = json.loads(custom_json) if custom_json else {}
+            except Exception:
+                data_dict = {}
 
-        # Зсув графіка в залежності від групи та дня тижня (0..6)
-        # Стандартна сітка ДТЕК (6 груп по 4 години):
+            for hour in range(24):
+                status = data_dict.get(str(hour), "yes")
+                hourly.append({
+                    "hour": hour,
+                    "label": f"{hour:02d}:00",
+                    "status": status
+                })
+
+            slots = []
+            for slot_idx in range(6):
+                start_h = slot_idx * 4
+                end_h = (slot_idx + 1) * 4
+                slot_status = hourly[start_h]["status"] if start_h < len(hourly) else "yes"
+                slots.append({
+                    "start": f"{start_h:02d}:00",
+                    "end": "24:00" if end_h == 24 else f"{end_h:02d}:00",
+                    "status": slot_status
+                })
+
+            return {
+                "slots": slots,
+                "hourly": hourly
+            }
+
+        # Базова група та підтримка підгруп (наприклад 1.1, 1.2, 3.2 тощо)
+        base_group_str = group_name.split(".")[0] if "." in group_name else group_name
+        group_num = int(base_group_str) if base_group_str.isdigit() else 3
+
+        sub_offset = 0
+        if "." in group_name:
+            sub_part = group_name.split(".")[1]
+            if sub_part == "2":
+                sub_offset = 2
+
         patterns = {
             1: ["no", "yes", "maybe", "no", "yes", "maybe"],
             2: ["maybe", "no", "yes", "maybe", "no", "yes"],
@@ -46,8 +85,7 @@ class DtekScheduleManager:
         }
 
         base_pattern = patterns.get(group_num, patterns[3])
-        # Невеликий циклічний зсув на вихідні
-        shift = day_of_week % 2
+        shift = (day_of_week + (1 if sub_offset > 0 else 0)) % 6
         active_pattern = base_pattern[shift:] + base_pattern[:shift]
 
         slots = [
@@ -59,10 +97,10 @@ class DtekScheduleManager:
             {"start": "20:00", "end": "24:00", "status": active_pattern[5]},
         ]
 
-        # Також генеруємо погодинну розбивку (00:00 - 23:00) для зручного відображення на UI
         hourly = []
         for hour in range(24):
-            slot_idx = hour // 4
+            adjusted_hour = (hour - sub_offset) % 24
+            slot_idx = adjusted_hour // 4
             status = active_pattern[slot_idx]
             hourly.append({
                 "hour": hour,
@@ -80,10 +118,10 @@ class DtekScheduleManager:
         today_str = datetime.now().strftime("%Y-%m-%d")
         cached = get_dtek_cache(today_str, self.group)
 
-        if cached and not self._is_cache_stale(cached.get("updated_at")):
+        # Для кастомного розкладу або старого кешу перевіряємо актуальність
+        if cached and not self._is_cache_stale(cached.get("updated_at")) and self.region != "custom":
             return cached
 
-        # Спроба отримати реальні дані з API ДТЕК (якщо доступно) або формування розкладу
         now = datetime.now()
         schedule_data = self.generate_default_schedule_for_group(self.group, now.weekday())
 
@@ -103,11 +141,10 @@ class DtekScheduleManager:
         }
 
     def _is_cache_stale(self, updated_at_str: Optional[str]) -> bool:
-        if not updated_at_str:
+        if not updated_at_str or self.region == "custom":
             return True
         try:
             updated_at = datetime.fromisoformat(updated_at_str)
-            # Оновлюємо кеш кожні 2 години
             return (datetime.now() - updated_at).total_seconds() > 7200
         except Exception:
             return True
@@ -135,7 +172,35 @@ class DtekScheduleManager:
                 "hourly": hourly
             }
 
-        # Шукаємо поточний 4-годинний слот
+        # Якщо регіон custom, беремо статус години напряму з hourly
+        if self.region == "custom":
+            current_h_item = next((h for h in hourly if h["hour"] == current_hour), {"status": "yes"})
+            status_code = current_h_item["status"]
+            next_hour = (current_hour + 1) % 24
+            next_h_item = next((h for h in hourly if h["hour"] == next_hour), current_h_item)
+
+            status_labels = {
+                "yes": ("Світло є (власний графік)", "Планове постачання за власним розкладом"),
+                "no": ("Відключення (власний графік)", "Планове знеструмлення за власним розкладом"),
+                "maybe": ("Можливе відключення", "Можливе знеструмлення за власним розкладом")
+            }
+
+            label, desc = status_labels.get(status_code, ("Світло є", "Нормальний режим"))
+            next_label, _ = status_labels.get(next_h_item["status"], ("Зміна статусу", ""))
+
+            return {
+                "group": "Власний",
+                "status": status_code,
+                "status_label": label,
+                "status_desc": desc,
+                "current_slot_end": f"{(current_hour + 1):02d}:00",
+                "next_change": f"о {(current_hour + 1):02d}:00",
+                "next_status_label": next_label,
+                "is_emergency": False,
+                "hourly": hourly,
+                "current_hour": current_hour
+            }
+
         current_slot = None
         next_slot = None
 
