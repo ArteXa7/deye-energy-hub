@@ -8,9 +8,9 @@
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Open%20Source-orange?style=for-the-badge)
 
-A production-grade real-time web monitoring and automation system for **Deye Hybrid Inverters** (SUN-5K-SG03LP1-EU and compatible) combined with **DTEK Power Outage Schedules** (Ukraine) and automated **Telegram alerts**.
+A production-grade real-time web monitoring and automation system for **Deye Hybrid Inverters** (SUN-5K-SG03LP1-EU and compatible) combined with **DTEK Power Outage Schedules** (Ukraine), secure cookie-based session authentication, and automated **Telegram alerts**.
 
-[Features](#-key-features) • [Architecture](#-system-architecture) • [Quick Start](#-quick-start) • [Docker Deployment](#-docker-deployment) • [Demo Mode](#-demo-mode) • [Configuration](#-configuration)
+[Features](#-key-features) • [Architecture](#-system-architecture) • [Security & Auth](#-security--authentication) • [Quick Start](#-quick-start) • [Docker Deployment](#-docker-deployment) • [Configuration](#-configuration)
 
 </div>
 
@@ -19,7 +19,7 @@ A production-grade real-time web monitoring and automation system for **Deye Hyb
 ## 🌟 Key Features
 
 - **Hybrid Inverter Telemetry (Deye Sun series):** Real-time monitoring of grid voltage (230V phase), grid frequency, battery SoC (State of Charge), voltage, temperature, current, and household power consumption.
-- **Modbus RTU / TCP & Smart Simulation Mode:** Connects directly to physical Deye inverters via RS485/USB or Modbus TCP. Includes an intelligent **Demo Mode (`DEMO_MODE=True`)** that generates realistic telemetry and allows full UI testing without hardware.
+- **Safe Read-Only Modbus & Smart Simulation Mode:** Connects safely to physical Deye inverters via RS485/USB or Modbus TCP using a strict read-only register polling mechanism (`read_holding_registers` 630+). Includes an intelligent **Demo Mode (`DEMO_MODE=True`)** that generates realistic telemetry and allows full UI testing without hardware.
 - **DTEK Power Outage Schedules:** Integrates regional blackout schedules (Kyiv, Kyiv Region, Dnipro, Odesa) with hourly status breakdown (Power ON / Planned Outage / Gray Zone).
 - **Automated Telegram Bot Alerts:** Instant Ukrainian-language notifications when mains power fails, when power is restored, and when battery SoC drops below critical thresholds (`<20%`).
 - **Interactive Energy Dashboard:** Premium glassmorphism UI with live power-flow animation, battery runtime calculator, historical blackout logs, and load test controls (fridge, electric kettle).
@@ -29,13 +29,15 @@ A production-grade real-time web monitoring and automation system for **Deye Hyb
 
 ## 🏗️ System Architecture
 
+
 ```
+
 ┌─────────────────────────┐         ┌──────────────────────────┐
 │  Deye Inverter Hardware │         │ DTEK Outage Schedule API │
 │  (Modbus RTU / TCP)     │         │ (Regional Schedules)     │
 └────────────┬────────────┘         └─────────────┬────────────┘
-             │ (RS485 / TCP)                      │ (HTTP GET)
-             ▼                                    ▼
+│ (RS485 / TCP - Read-Only)          │ (HTTP GET)
+▼                                    ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                  FastAPI Backend (Python 3.11)               │
 │  ┌───────────────────────┐          ┌─────────────────────┐  │
@@ -46,13 +48,23 @@ A production-grade real-time web monitoring and automation system for **Deye Hyb
 │                                ▼                             │
 │                     SQLite Database (Local)                  │
 └────────────────────────────────┬─────────────────────────────┘
-                                 │
-                                 ▼ (WebSockets / REST API)
+│
+▼ (WebSockets / REST API)
 ┌──────────────────────────────────────────────────────────────┐
 │                 Frontend Dashboard (HTML/CSS/JS)             │
 │   • Live Power Flow Animation • Battery SOC Gauge • DTEK Grid│
 └──────────────────────────────────────────────────────────────┘
+
 ```
+
+---
+
+## 🔒 Security & Authentication
+
+- **Session-Based Cookie Auth:** The entire dashboard and settings pages are secured behind a robust login system (`/login`). Unauthenticated requests are automatically redirected to the login screen.
+- **HTTP-Only Cookies:** Sessions are managed via secure HTTP-only cookies (`deye_session`), preventing XSS token theft.
+- **Default Credentials:** Out-of-the-box default login is `admin` / `admin`, which can be changed directly inside the web settings panel or via `.env`.
+- **Zero Hardcoded Secrets:** All application credentials, API tokens, and parameters are handled securely through environment variables and a local database.
 
 ---
 
@@ -72,43 +84,54 @@ Use the provided `run.ps1` script for automated virtual environment setup, depen
 
 ```powershell
 .\run.ps1
+
 ```
 
 ### Manual Local Startup (Linux / macOS / Windows)
 
 1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/invertorweb.git
-   cd invertorweb
-   ```
+```bash
+git clone [https://github.com/your-username/invertorweb.git](https://github.com/your-username/invertorweb.git)
+cd invertorweb
+
+```
+
 
 2. **Create and activate virtual environment:**
-   ```bash
-   python -m venv venv
-   # On Windows:
-   .\venv\Scripts\Activate
-   # On Linux/macOS:
-   source venv/bin/activate
-   ```
+```bash
+python -m venv venv
+# On Windows:
+.\venv\Scripts\Activate
+# On Linux/macOS:
+source venv/bin/activate
+
+```
+
 
 3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -r requirements.txt
+
+```
+
 
 4. **Configure environment variables:**
-   Copy `.env.example` to `.env` and adjust settings:
-   ```bash
-   cp .env.example .env
-   ```
+Copy `.env.example` to `.env` and adjust settings:
+```bash
+cp .env.example .env
+
+```
+
 
 5. **Run the server:**
-   ```bash
-   python -m backend.main
-   ```
+```bash
+python -m backend.main
+
+```
+
 
 6. **Open in browser:**
-   👉 `http://localhost:8000`
+👉 `http://localhost:8000` (Log in with `admin` / `admin`)
 
 ---
 
@@ -118,16 +141,21 @@ Deploy the entire application with a single command using Docker Compose:
 
 ```bash
 docker compose up -d --build
+
 ```
 
 To view logs:
+
 ```bash
 docker compose logs -f
+
 ```
 
 To stop:
+
 ```bash
 docker compose down
+
 ```
 
 ---
@@ -135,9 +163,10 @@ docker compose down
 ## 🎮 Demo Mode
 
 If you don't have a physical Deye inverter connected, the application runs out-of-the-box in **Demo Mode**:
-- Set `DEMO_MODE=True` in `.env`.
-- The background collector automatically simulates realistic fluctuations (household load 350–680W, battery charging/discharging, grid voltage 226–231V).
-- You can manually click the **"⚡ Мережа"** toggle button in the header to simulate power outages and observe real-time UI transitions, alert sounds, and database logging!
+
+* Set `DEMO_MODE=True` in `.env`.
+* The background collector automatically simulates realistic fluctuations (household load 350–680W, battery charging/discharging, grid voltage 226–231V).
+* You can manually click the **"⚡ Мережа"** toggle button in the header to simulate power outages and observe real-time UI transitions, alert sounds, and database logging!
 
 ---
 
@@ -150,6 +179,10 @@ All parameters are fully configurable via environment variables in `.env`:
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8000
 DEBUG=false
+
+# Default admin credentials
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin
 
 # Demo / Simulation Mode (True = test without physical inverter)
 DEMO_MODE=True
@@ -168,7 +201,7 @@ BATTERY_CAPACITY_WH=5120
 BATTERY_MIN_SOC=15
 LOW_BATTERY_ALERT_SOC=20
 
-# Modbus Hardware Integration (Deye Inverter via RS485/USB or TCP)
+# Modbus Hardware Integration (Deye Inverter via RS485/USB or TCP - Read-Only)
 MODBUS_ENABLED=False
 MODBUS_TYPE=rtu
 MODBUS_PORT=COM3
@@ -176,15 +209,16 @@ MODBUS_BAUDRATE=9600
 MODBUS_HOST=192.168.1.100
 MODBUS_TCP_PORT=502
 MODBUS_SLAVE_ID=1
+
 ```
 
 ---
 
 ## 🛡️ Security Audit
 
-- No hardcoded API keys, Telegram tokens, passwords, or IP addresses exist in the source code.
-- All secrets are loaded strictly from environment variables via `python-dotenv`.
-- `.env` is ignored in `.gitignore` to prevent accidental credential leakage.
+* No hardcoded API keys, Telegram tokens, passwords, or IP addresses exist in the source code.
+* All secrets are loaded strictly from environment variables or secure database parameters.
+* `.env` and local SQLite databases are ignored in `.gitignore` to prevent accidental credential leakage.
 
 ---
 
