@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Налаштування — Deye Inverter</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .settings-card {
+      background: var(--bg-card, #1e293b);
+      border: 1px solid var(--border-card, rgba(148, 163, 184, 0.12));
+      border-radius: var(--radius-lg, 20px);
+      padding: 24px;
+      box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.25));
+    }
+
+    .settings-tabs {
+      display: flex;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.7);
+      padding: 6px;
+      border-radius: var(--radius-md, 14px);
+      border: 1px solid var(--border-card, rgba(148, 163, 184, 0.12));
+      overflow-x: auto;
+    }
+
+    .settings-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 10px 16px;
+      color: var(--text-muted, #94a3b8);
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm, 8px);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .settings-tab:hover {
+      color: var(--text-main, #f8fafc);
+      background: rgba(30, 41, 59, 0.6);
+    }
+
+    .settings-tab.active {
+      background: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.35);
+    }
+
+    .settings-tab-content { display: none; }
+    .settings-tab-content.active {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted, #94a3b8);
+    }
+
+    .form-input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-card, rgba(148, 163, 184, 0.18));
+      border-radius: var(--radius-sm, 8px);
+      padding: 10px 14px;
+      color: var(--text-main, #f8fafc);
+      font-size: 0.92rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--color-cyan, #38bdf8);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .form-row { display: flex; gap: 16px; }
+
+    .form-group-checkbox {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--border-card, rgba(148, 163, 184, 0.12));
+      border-radius: var(--radius-md, 14px);
+      padding: 14px 18px;
+    }
+
+    .switch-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text-main, #f8fafc);
+      user-select: none;
+    }
+
+    .switch-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #0284c7;
+      cursor: pointer;
+    }
+
+    .form-hint {
+      font-size: 0.78rem;
+      color: var(--text-dim, #64748b);
+      margin-top: 6px;
+      display: block;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm, 8px);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: 1px solid transparent;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+    .btn-primary:hover { background: #0369a1; }
+
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.7);
+      border-color: var(--border-card, rgba(148, 163, 184, 0.2));
+      color: var(--text-main, #f8fafc);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-subtle, #334155);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-danger {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: rgba(244, 63, 94, 0.4);
+      color: #fb7185;
+    }
+    .btn-danger:hover { background: rgba(244, 63, 94, 0.25); }
+
+    .test-result {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm, 8px);
+      font-size: 0.86rem;
+      font-weight: 500;
+      font-family: var(--font-mono, monospace);
+    }
+    .test-result.success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    .test-result.error {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      color: #fb7185;
+    }
+
+    @media (max-width: 640px) {
+      .form-row { flex-direction: column; gap: 0; }
+      .settings-tabs { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="app-container">
+    <header class="header">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span class="brand-name">DEYE</span>
+            <span class="brand-model">SETTINGS</span>
+          </div>
+          <div class="brand-subtitle">Керування системною конфігурацією</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <a href="/" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem;">
+          <span>← До дашборда</span>
+        </a>
+        <button class="btn btn-danger" id="logoutBtn" style="padding: 8px 14px; font-size: 0.85rem;">Вийти з акаунту</button>
+      </div>
+    </header>
+
+    <section class="settings-card" id="settingsContent" style="max-width: 900px; margin: 0 auto; width: 100%;">
+      <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <div class="card-title-group" style="display: flex; align-items: center; gap: 12px;">
+          <div class="card-icon-badge" style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Системні параметри та конфігурація</h2>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">Збереження застосовується на бекенді миттєво</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="tab-inverter">Інвертор & Modbus</button>
+        <button class="settings-tab" data-tab="tab-dtek">ДТЕК Розклад</button>
+        <button class="settings-tab" data-tab="tab-telegram">Telegram Bot</button>
+        <button class="settings-tab" data-tab="tab-security">Обліковий запис</button>
+      </div>
+
+      <div class="settings-form-container" style="margin-top: 24px;">
+        <!-- Вкладка 1 -->
+        <div class="settings-tab-content active" id="tab-inverter">
+          <div class="form-group-checkbox">
+            <label class="switch-label">
+              <input type="checkbox" id="set_demo_mode">
+              <span>Режим симуляції (DEMO_MODE)</span>
+            </label>
+            <small class="form-hint">Симулює роботу інвертора без реального обладнання.</small>
+          </div>
+
+          <div class="form-group-checkbox" style="margin-top: 14px;">
+            <label class="switch-label">
+              <input type="checkbox" id="set_modbus_enabled">
+              <span>Увімкнути Modbus опитування заліза</span>
+            </label>
+            <small class="form-hint">Опитування реальних регістрів інвертора по мережі або порту.</small>
+          </div>
+
+          <div class="form-row" style="margin-top: 16px;">
+            <div class="form-group" style="flex: 2;">
+              <label>Тип підключення Modbus</label>
+              <select id="set_modbus_type" class="form-input">
+                <option value="tcp">Modbus TCP (Wi-Fi / Ethernet)</option>
+                <option value="rtu">Modbus RTU (Serial / USB / COM)</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>Slave ID</label>
+              <input type="number" id="set_modbus_slave_id" class="form-input" value="1">
+            </div>
+          </div>
+
+          <div class="form-row" id="tcpSettingsRow" style="margin-top: 8px;">
+            <div class="form-group" style="flex: 2;">
+              <label>IP-адреса інвертора (Host)</label>
+              <input type="text" id="set_modbus_host" class="form-input" placeholder="192.168.1.100">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>TCP Порт</label>
+              <input type="number" id="set_modbus_tcp_port" class="form-input" value="502">
+            </div>
+          </div>
+
+          <div class="form-group hidden" id="rtuSettingsRow" style="margin-top: 8px;">
+            <label>Послідовний порт (COM / USB)</label>
+            <input type="text" id="set_modbus_port" class="form-input" placeholder="COM3 або /dev/ttyUSB0">
+          </div>
+
+          <div class="test-modbus-wrapper" style="margin-top: 20px;">
+            <button class="btn btn-secondary" id="testModbusBtn">🔌 Перевірити зв'язок з інвертором</button>
+            <div id="testModbusResult" class="test-result hidden"></div>
+          </div>
+        </div>
+
+        <!-- Вкладка 2 -->
+        <div class="settings-tab-content" id="tab-dtek">
+          <div class="form-group">
+            <label>Регіон ДТЕК</label>
+            <select id="set_dtek_region" class="form-input">
+              <option value="kiev">м. Київ (YASNO)</option>
+              <option value="kiev_region">Київська область</option>
+              <option value="dnipro">Дніпропетровська область</option>
+              <option value="odesa">Одеська область</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-top: 14px;">
+            <label>Черга (Група відключень)</label>
+            <select id="set_dtek_group" class="form-input">
+              <option value="1">Черга 1</option>
+              <option value="2">Черга 2</option>
+              <option value="3">Черга 3</option>
+              <option value="4">Черга 4</option>
+              <option value="5">Черга 5</option>
+              <option value="6">Черга 6</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Вкладка 3 -->
+        <div class="settings-tab-content" id="tab-telegram">
+          <div class="form-group-checkbox">
+            <label class="switch-label">
+              <input type="checkbox" id="set_telegram_notifications_enabled">
+              <span>Увімкнути Telegram сповіщення</span>
+            </label>
+            <small class="form-hint">Надсилати сповіщення про перехід на АКБ та відновлення мережі.</small>
+          </div>
+          <div class="form-group" style="margin-top: 16px;">
+            <label>Telegram Bot Token</label>
+            <input type="text" id="set_telegram_bot_token" class="form-input" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ">
+          </div>
+          <div class="form-group" style="margin-top: 14px;">
+            <label>Telegram Chat ID</label>
+            <input type="text" id="set_telegram_chat_id" class="form-input" placeholder="-100123456789 або 98765432">
+          </div>
+        </div>
+
+        <!-- Вкладка 4: Логін та Пароль на вхід у дашборд -->
+        <div class="settings-tab-content" id="tab-security">
+          <div class="form-group">
+            <label>Логін для входу в систему</label>
+            <input type="text" id="set_admin_username" class="form-input" placeholder="admin">
+          </div>
+          <div class="form-group" style="margin-top: 14px;">
+            <label>Новий пароль для входу</label>
+            <input type="password" id="set_admin_password" class="form-input" placeholder="Введіть новий пароль (залиште порожнім, якщо не змінювати)">
+            <small class="form-hint">Ці дані використовуються під час входу на головний дашборд.</small>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border-card); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div class="save-status-msg" id="saveStatusMsg" style="font-weight: 600; font-size: 0.9rem;"></div>
+        <div class="modal-buttons" style="display: flex; gap: 10px;">
+          <a href="/" class="btn btn-secondary">Повернутися до дашборда</a>
+          <button class="btn btn-primary" id="settingsSaveBtn">Зберегти й застосувати</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer" style="margin-top: 30px;">
+      <div class="footer-left">
+        <span>Deye Solar & Hybrid Inverter Dashboard • v3.0 PRO (Україна)</span>
+      </div>
+      <div class="footer-right">
+        <span>Авторизована сесія</span>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      function showToast(title, desc, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type === 'danger' ? 'toast-danger' : type === 'success' ? 'toast-success' : ''}`;
+        const icon = type === 'danger' ? '⚡' : type === 'success' ? '✅' : 'ℹ️';
+
+        toast.innerHTML = `
+          <div class="toast-icon">${icon}</div>
+          <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-desc">${desc}</div>
+          </div>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.classList.add('toast-hiding');
+          setTimeout(() => toast.remove(), 350);
+        }, 4800);
+      }
+
+      const sDom = {
+        logoutBtn: document.getElementById('logoutBtn'),
+        saveBtn: document.getElementById('settingsSaveBtn'),
+        testBtn: document.getElementById('testModbusBtn'),
+        testResult: document.getElementById('testModbusResult'),
+        saveMsg: document.getElementById('saveStatusMsg'),
+
+        demoMode: document.getElementById('set_demo_mode'),
+        modbusEnabled: document.getElementById('set_modbus_enabled'),
+        modbusType: document.getElementById('set_modbus_type'),
+        modbusSlaveId: document.getElementById('set_modbus_slave_id'),
+        modbusHost: document.getElementById('set_modbus_host'),
+        modbusTcpPort: document.getElementById('set_modbus_tcp_port'),
+        modbusPort: document.getElementById('set_modbus_port'),
+        dtekRegion: document.getElementById('set_dtek_region'),
+        dtekGroup: document.getElementById('set_dtek_group'),
+        telegramEnabled: document.getElementById('set_telegram_notifications_enabled'),
+        telegramToken: document.getElementById('set_telegram_bot_token'),
+        telegramChatId: document.getElementById('set_telegram_chat_id'),
+        adminUsername: document.getElementById('set_admin_username'),
+        adminPassword: document.getElementById('set_admin_password'),
+        tcpRow: document.getElementById('tcpSettingsRow'),
+        rtuRow: document.getElementById('rtuSettingsRow'),
+        tabs: document.querySelectorAll('.settings-tab'),
+        tabContents: document.querySelectorAll('.settings-tab-content')
+      };
+
+      function updateModbusTypeVisibility() {
+        if (sDom.modbusType.value === 'tcp') {
+          sDom.tcpRow.classList.remove('hidden');
+          sDom.rtuRow.classList.add('hidden');
+        } else {
+          sDom.tcpRow.classList.add('hidden');
+          sDom.rtuRow.classList.remove('hidden');
+        }
+      }
+
+      async function loadSettingsToForm() {
+        try {
+          const res = await fetch('/api/admin/settings');
+          if (res.status === 401) {
+            window.location.href = '/login';
+            return;
+          }
+          const data = await res.json();
+
+          sDom.demoMode.checked = (data.demo_mode === 'True' || data.demo_mode === 'true');
+          sDom.modbusEnabled.checked = (data.modbus_enabled === 'True' || data.modbus_enabled === 'true');
+          sDom.modbusType.value = data.modbus_type || 'tcp';
+          sDom.modbusSlaveId.value = data.modbus_slave_id || '1';
+          sDom.modbusHost.value = data.modbus_host || '192.168.1.100';
+          sDom.modbusTcpPort.value = data.modbus_tcp_port || '502';
+          sDom.modbusPort.value = data.modbus_port || 'COM3';
+          sDom.dtekRegion.value = data.dtek_region || 'kiev';
+          sDom.dtekGroup.value = data.dtek_group || '3';
+          sDom.telegramEnabled.checked = (data.telegram_notifications_enabled === 'True' || data.telegram_notifications_enabled === 'true');
+          sDom.telegramToken.value = data.telegram_bot_token || '';
+          sDom.telegramChatId.value = data.telegram_chat_id || '';
+          sDom.adminUsername.value = data.admin_username || 'admin';
+          sDom.adminPassword.value = '';
+
+          updateModbusTypeVisibility();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      loadSettingsToForm();
+
+      sDom.logoutBtn.addEventListener('click', async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login';
+      });
+
+      sDom.modbusType.addEventListener('change', updateModbusTypeVisibility);
+
+      sDom.tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          sDom.tabs.forEach(t => t.classList.remove('active'));
+          sDom.tabContents.forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          const targetId = tab.getAttribute('data-tab');
+          const targetEl = document.getElementById(targetId);
+          if (targetEl) targetEl.classList.add('active');
+        });
+      });
+
+      sDom.testBtn.addEventListener('click', async () => {
+        sDom.testResult.className = 'test-result';
+        sDom.testResult.textContent = 'Перевірка зв\'язку з інвертором...';
+        sDom.testResult.classList.remove('hidden');
+
+        try {
+          const payload = {
+            modbus_host: sDom.modbusHost.value,
+            modbus_tcp_port: parseInt(sDom.modbusTcpPort.value) || 502,
+            modbus_type: sDom.modbusType.value,
+            modbus_port: sDom.modbusPort.value
+          };
+
+          const res = await fetch('/api/admin/test-modbus', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            sDom.testResult.className = 'test-result success';
+            sDom.testResult.textContent = data.message;
+          } else {
+            sDom.testResult.className = 'test-result error';
+            sDom.testResult.textContent = data.message || 'Помилка з\'єднання';
+          }
+        } catch (e) {
+          sDom.testResult.className = 'test-result error';
+          sDom.testResult.textContent = 'Помилка мережевого запиту до сервера';
+        }
+      });
+
+      sDom.saveBtn.addEventListener('click', async () => {
+        sDom.saveMsg.textContent = 'Збереження...';
+        sDom.saveMsg.style.color = '#38bdf8';
+
+        try {
+          const settingsPayload = {
+            demo_mode: sDom.demoMode.checked ? 'True' : 'False',
+            modbus_enabled: sDom.modbusEnabled.checked ? 'True' : 'False',
+            modbus_type: sDom.modbusType.value,
+            modbus_slave_id: sDom.modbusSlaveId.value,
+            modbus_host: sDom.modbusHost.value,
+            modbus_tcp_port: sDom.modbusTcpPort.value,
+            modbus_port: sDom.modbusPort.value,
+            dtek_region: sDom.dtekRegion.value,
+            dtek_group: sDom.dtekGroup.value,
+            telegram_notifications_enabled: sDom.telegramEnabled.checked ? 'True' : 'False',
+            telegram_bot_token: sDom.telegramToken.value,
+            telegram_chat_id: sDom.telegramChatId.value,
+            admin_username: sDom.adminUsername.value.trim() || 'admin'
+          };
+
+          if (sDom.adminPassword.value.trim()) {
+            settingsPayload.admin_password = sDom.adminPassword.value.trim();
+          }
+
+          const res = await fetch('/api/admin/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settingsPayload)
+          });
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            sDom.saveMsg.textContent = 'Успішно збережено та застосовано!';
+            sDom.saveMsg.style.color = '#34d399';
+            showToast('Налаштування оновлено', data.message, 'success');
+            setTimeout(() => { sDom.saveMsg.textContent = ''; }, 3000);
+          } else {
+            throw new Error(data.detail || 'Не вдалося зберегти налаштування');
+          }
+        } catch (e) {
+          sDom.saveMsg.textContent = 'Помилка збереження';
+          sDom.saveMsg.style.color = '#fb7185';
+          showToast('Помилка', e.message || 'Не вдалося зберегти налаштування', 'danger');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

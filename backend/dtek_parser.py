@@ -20,6 +20,10 @@ class DtekScheduleManager:
         self.group = config.DTEK_GROUP
         self.is_emergency = False
 
+    def apply_new_settings(self):
+        self.region = config.DTEK_REGION
+        self.group = config.DTEK_GROUP
+
     def generate_default_schedule_for_group(self, group_name: str, day_of_week: int) -> List[Dict[str, Any]]:
         """
         Генерує офіційну матрицю графіків стабілізаційних відключень (4 години чергування).

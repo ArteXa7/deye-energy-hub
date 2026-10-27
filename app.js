@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Deye Inverter Home Energy System Dashboard — Frontend Client
  * Підключення до FastAPI бекенду та українізований інтерфейс
  */
@@ -460,3 +460,4 @@
     init();
   }
 })();
+

@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Deye Inverter Home Energy System — Dark Theme & Responsive Stylesheet
    Palette: Background #0f172a, Cards #1e293b, Text #f8fafc / #94a3b8
    ========================================================================== */
@@ -50,7 +50,6 @@
   --transition-normal: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Сброс і базові параметри */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -60,6 +59,8 @@
 }
 
 html, body {
+  display: block;
+  width: 100%;
   min-height: 100vh;
   background-color: var(--bg-main);
   color: var(--text-main);
@@ -69,7 +70,6 @@ html, body {
   position: relative;
 }
 
-/* Декоративне фонове свічення */
 .bg-glow {
   position: fixed;
   border-radius: 50%;
@@ -105,10 +105,10 @@ body.blackout-active .bg-glow-2 {
   background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, transparent 70%);
 }
 
-/* Основний контейнер додатку */
 .app-container {
   position: relative;
   z-index: 1;
+  width: 100%;
   max-width: 1440px;
   margin: 0 auto;
   padding: 18px 24px 36px 24px;
@@ -125,6 +125,7 @@ body.blackout-active .bg-glow-2 {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  width: 100%;
   padding: 14px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
@@ -272,7 +273,32 @@ body.blackout-active .bg-glow-2 {
   height: 18px;
 }
 
-/* Кнопка симулятора відключення мережі */
+.settings-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.settings-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.settings-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .sim-switch-wrapper {
   position: relative;
 }
@@ -298,11 +324,6 @@ body.blackout-active .bg-glow-2 {
 .sim-switch-btn:hover {
   background: rgba(16, 185, 129, 0.25);
   border-color: rgba(16, 185, 129, 0.7);
-  transform: translateY(-1px);
-}
-
-.sim-switch-btn:active {
-  transform: translateY(1px);
 }
 
 .sim-switch-btn.active-blackout {
@@ -310,13 +331,6 @@ body.blackout-active .bg-glow-2 {
   border-color: rgba(244, 63, 94, 0.65);
   color: #fecdd3;
   box-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
-  animation: glow-pulse-red 2s infinite;
-}
-
-@keyframes glow-pulse-red {
-  0% { box-shadow: 0 0 12px rgba(244, 63, 94, 0.3); }
-  50% { box-shadow: 0 0 24px rgba(244, 63, 94, 0.6); }
-  100% { box-shadow: 0 0 12px rgba(244, 63, 94, 0.3); }
 }
 
 .switch-content {
@@ -326,13 +340,14 @@ body.blackout-active .bg-glow-2 {
 }
 
 /* ==========================================================================
-   1. Головний баннер статусу мережі (Network Hero Banner)
+   1. Головний баннер статусу мережі
    ========================================================================== */
 .network-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  width: 100%;
   padding: 24px 28px;
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
   border: 1px solid rgba(16, 185, 129, 0.3);
@@ -351,7 +366,6 @@ body.blackout-active .bg-glow-2 {
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
-  transition: all 0.4s ease;
 }
 
 body.blackout-active .network-banner {
@@ -381,7 +395,7 @@ body.blackout-active .network-banner::before {
   position: absolute;
   left: 0;
   top: 50%;
-  transform: translateY(-50%);
+  margin-top: -26px;
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -391,15 +405,12 @@ body.blackout-active .network-banner::before {
 }
 
 @keyframes radar-ping {
-  75%, 100% {
-    transform: translateY(-50%) scale(1.6);
-    opacity: 0;
-  }
+  0% { transform: scale(1); opacity: 0.8; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
 }
 
 body.blackout-active .radar-ping {
   background: rgba(244, 63, 94, 0.4);
-  animation: radar-ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 .status-icon {
@@ -415,7 +426,6 @@ body.blackout-active .radar-ping {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  transition: all 0.3s ease;
 }
 
 body.blackout-active .status-icon {
@@ -440,17 +450,10 @@ body.blackout-active .status-icon {
   letter-spacing: 0.02em;
   color: var(--color-online);
   line-height: 1.2;
-  transition: color 0.3s ease;
 }
 
 body.blackout-active .status-headline {
   color: var(--color-offline);
-  animation: blink-soft 2.5s infinite ease-in-out;
-}
-
-@keyframes blink-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
 }
 
 .status-subtext {
@@ -535,7 +538,6 @@ body.blackout-active .mode-bullet {
   color: #38bdf8;
   font-family: var(--font-mono);
   letter-spacing: -0.01em;
-  transition: color 0.3s ease;
 }
 
 body.blackout-active .runtime-value .highlight {
@@ -610,7 +612,6 @@ body.blackout-active .runtime-value .highlight {
   gap: 6px;
   position: relative;
   z-index: 2;
-  transition: all var(--transition-normal);
 }
 
 .node-icon {
@@ -622,7 +623,6 @@ body.blackout-active .runtime-value .highlight {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-normal);
 }
 
 .node-icon svg {
@@ -763,6 +763,7 @@ body.blackout-active .flow-particles.grid-flow-off {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 18px;
+  width: 100%;
 }
 
 .metric-card {
@@ -774,14 +775,8 @@ body.blackout-active .flow-particles.grid-flow-off {
   flex-direction: column;
   justify-content: space-between;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   position: relative;
-}
-
-.metric-card:hover {
-  border-color: rgba(148, 163, 184, 0.25);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  width: 100%;
 }
 
 .card-header {
@@ -826,7 +821,9 @@ body.blackout-active .flow-particles.grid-flow-off {
 }
 
 .card-subtitle {
+  display: block;
   font-size: 0.72rem;
+  line-height: 1.3;
   color: var(--text-muted);
 }
 
@@ -1276,6 +1273,7 @@ body.blackout-active .flow-particles.grid-flow-off {
   border-radius: var(--radius-lg);
   padding: 22px 24px;
   box-shadow: var(--shadow-sm);
+  width: 100%;
 }
 
 .dtek-icon-badge {
@@ -1307,11 +1305,10 @@ body.blackout-active .flow-particles.grid-flow-off {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  transition: transform var(--transition-fast);
+  transition: border-color var(--transition-fast);
 }
 
 .dtek-hour-cell:hover {
-  transform: translateY(-2px);
   border-color: rgba(56, 189, 248, 0.4);
 }
 
@@ -1372,6 +1369,7 @@ body.blackout-active .flow-particles.grid-flow-off {
   border-radius: var(--radius-lg);
   padding: 22px 24px;
   box-shadow: var(--shadow-sm);
+  width: 100%;
 }
 
 .section-header {
@@ -1508,12 +1506,6 @@ body.blackout-active .flow-particles.grid-flow-off {
 .status-active {
   background: rgba(244, 63, 94, 0.22);
   color: #fb7185;
-  animation: pulse-active 1.5s infinite;
-}
-
-@keyframes pulse-active {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
 }
 
 .badge-dot {
@@ -1556,6 +1548,7 @@ body.blackout-active .flow-particles.grid-flow-off {
   border-top: 1px solid rgba(148, 163, 184, 0.08);
   flex-wrap: wrap;
   gap: 10px;
+  width: 100%;
 }
 
 .footer-separator {
@@ -1593,24 +1586,12 @@ body.blackout-active .flow-particles.grid-flow-off {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   color: var(--text-main);
-  animation: toast-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transition: all 0.3s ease;
 }
 
 .toast.toast-hiding {
   opacity: 0;
-  transform: translateX(50px);
-}
-
-@keyframes toast-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  transform: translateY(10px);
 }
 
 .toast-danger {

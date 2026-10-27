@@ -4,6 +4,7 @@
 """
 
 import json
+import os
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
@@ -13,6 +14,13 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from backend.config import config
 
 Base = declarative_base()
+
+
+class SystemSetting(Base):
+    __tablename__ = "settings"
+
+    key = Column(String(50), primary_key=True, index=True)
+    value = Column(Text, nullable=True)
 
 
 class BlackoutEvent(Base):
@@ -224,9 +232,92 @@ def get_dtek_cache(date_str: str, group_name: str) -> Optional[Dict[str, Any]]:
         }
 
 
+# --- Керування налаштуваннями системи ---
+def get_setting(key: str, default: str = "") -> str:
+    with SessionLocal() as db:
+        setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+        return setting.value if setting and setting.value is not None else default
+
+
+def set_setting(key: str, value: Any):
+    with SessionLocal() as db:
+        setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+        if setting:
+            setting.value = str(value)
+        else:
+            setting = SystemSetting(key=key, value=str(value))
+            db.add(setting)
+        db.commit()
+
+
+def get_all_settings() -> Dict[str, str]:
+    with SessionLocal() as db:
+        settings = db.query(SystemSetting).all()
+        return {s.key: s.value for s in settings}
+
+
+def init_default_settings():
+    defaults = {
+        "modbus_enabled": str(config.MODBUS_ENABLED),
+        "modbus_type": config.MODBUS_TYPE,
+        "modbus_host": config.MODBUS_HOST,
+        "modbus_port": str(config.MODBUS_PORT),
+        "modbus_tcp_port": str(config.MODBUS_TCP_PORT),
+        "modbus_slave_id": str(config.MODBUS_SLAVE_ID),
+        "dtek_region": config.DTEK_REGION,
+        "dtek_group": config.DTEK_GROUP,
+        "telegram_bot_token": config.TELEGRAM_BOT_TOKEN,
+        "telegram_chat_id": config.TELEGRAM_CHAT_ID,
+        "telegram_notifications_enabled": str(config.TELEGRAM_NOTIFICATIONS_ENABLED),
+        "demo_mode": str(config.DEMO_MODE),
+        "admin_password": os.getenv("ADMIN_PASSWORD", "admin")
+    }
+    with SessionLocal() as db:
+        for k, v in defaults.items():
+            existing = db.query(SystemSetting).filter(SystemSetting.key == k).first()
+            if not existing:
+                db.add(SystemSetting(key=k, value=str(v)))
+        db.commit()
+
+
+def load_config_from_db():
+    try:
+        all_s = get_all_settings()
+        if not all_s:
+            return
+        if "modbus_enabled" in all_s:
+            config.MODBUS_ENABLED = all_s["modbus_enabled"].lower() in ("true", "1", "t")
+        if "modbus_type" in all_s:
+            config.MODBUS_TYPE = all_s["modbus_type"]
+        if "modbus_host" in all_s:
+            config.MODBUS_HOST = all_s["modbus_host"]
+        if "modbus_port" in all_s:
+            config.MODBUS_PORT = all_s["modbus_port"]
+        if "modbus_tcp_port" in all_s:
+            config.MODBUS_TCP_PORT = int(all_s["modbus_tcp_port"])
+        if "modbus_slave_id" in all_s:
+            config.MODBUS_SLAVE_ID = int(all_s["modbus_slave_id"])
+        if "dtek_region" in all_s:
+            config.DTEK_REGION = all_s["dtek_region"]
+        if "dtek_group" in all_s:
+            config.DTEK_GROUP = all_s["dtek_group"]
+        if "telegram_bot_token" in all_s:
+            config.TELEGRAM_BOT_TOKEN = all_s["telegram_bot_token"]
+        if "telegram_chat_id" in all_s:
+            config.TELEGRAM_CHAT_ID = all_s["telegram_chat_id"]
+        if "telegram_notifications_enabled" in all_s:
+            config.TELEGRAM_NOTIFICATIONS_ENABLED = all_s["telegram_notifications_enabled"].lower() in ("true", "1", "t")
+        if "demo_mode" in all_s:
+            config.DEMO_MODE = all_s["demo_mode"].lower() in ("true", "1", "t")
+    except Exception:
+        pass
+
+
 # --- Початкова ініціалізація та демо-дані ---
 def init_db():
     Base.metadata.create_all(bind=engine)
+    init_default_settings()
+    load_config_from_db()
 
     with SessionLocal() as db:
         count = db.query(BlackoutEvent).count()
