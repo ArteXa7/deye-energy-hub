@@ -193,7 +193,7 @@ TELEGRAM_CHAT_ID=your_telegram_chat_id_here
 TELEGRAM_NOTIFICATIONS_ENABLED=True
 
 # DTEK Power Outage Schedule Settings
-DTEK_REGION=kiev          # Options: kiev, kiev_region, dnipro, odesa
+DTEK_REGION=kyiv          # Options: kyiv, kyiv_region, dnipro, odesa
 DTEK_GROUP=3              # Queue group: 1 to 6
 
 # Battery Parameters (LiFePO4)
