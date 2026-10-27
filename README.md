@@ -19,48 +19,55 @@ A production-grade real-time web monitoring and automation system for **Deye Hyb
 ## 🌟 Key Features
 
 - **Dynamic Inverter & Battery Telemetry:** Real-time extraction of inverter model name, serial identification, battery State of Health (SOH), and capacity (Ah / kWh) via Modbus/BMS with zero hardcoded placeholders.
-- **Safe Read-Only Modbus Polling:** Interacts with physical Deye inverters safely over RS485/USB or Modbus TCP using strict read-only register requests (`read_holding_registers`). Transparent offline handling prevents silent fallback errors when hardware is disconnected.
-- **DTEK Outage Schedules & Subgroups:** Supports official schedules for Kyiv, Kyiv Region (including detailed subgroups `1.1`–`6.2`), Dnipro, Odesa, and a configurable **Custom Schedule** mode for non-standard regional timetables.
-- **Smart Simulation Mode (`DEMO_MODE=True`):** Full-fledged software emulation of household load variations (350–680W), battery discharge curves, and grid outages for UI/UX testing and development without physical hardware.
-- **Automated Telegram Bot Alerts:** Push notifications in Ukrainian triggered instantly on mains disconnection, utility restoration, and critical low-battery thresholds (`<20%`).
-- **Interactive Dashboard & Admin Panel:** Glassmorphism dark UI featuring live animated power flows, real-time battery runtime projections, 30-day blackout history logs, appliance load test controls, and an in-app system settings panel (`/settings`).
+- **Safe Read-Only Modbus Polling:** Interacts with physical Deye inverters safely over RS485/USB or Modbus TCP using strict read-only register requests (
+ead_holding_registers). Transparent offline handling prevents silent fallback errors when hardware is disconnected.
+- **DTEK Outage Schedules & Subgroups:** Supports official schedules for Kyiv, Kyiv Region (including detailed subgroups 1.1–6.2), Dnipro, Odesa, and a configurable **Custom Schedule** mode for non-standard regional timetables.
+- **Smart Simulation Mode (DEMO_MODE=True):** Full-fledged software emulation of household load variations (350–680W), battery discharge curves, and grid outages for UI/UX testing and development without physical hardware.
+- **Automated Telegram Bot Alerts:** Push notifications in Ukrainian triggered instantly on mains disconnection, utility restoration, and critical low-battery thresholds (<20%).
+- **Interactive Dashboard & Admin Panel:** Glassmorphism dark UI featuring live animated power flows, real-time battery runtime projections, 30-day blackout history logs, appliance load test controls, and an in-app system settings panel (/settings).
 - **Persistent SQLite Storage:** Local, zero-maintenance database tracking historical outage records, user preferences, and cached outage schedules.
 
 ---
 
 ## 🏗️ System Architecture
-┌─────────────────────────┐         ┌──────────────────────────┐
-│  Deye Inverter Hardware │         │ DTEK Outage Schedule API │
-│  (Modbus RTU / TCP)     │         │ (Regional / Custom JSON) │
-└────────────┬────────────┘         └─────────────┬────────────┘
-│ (RS485 / TCP - Read-Only)          │ (HTTP GET)
-▼                                    ▼
-┌──────────────────────────────────────────────────────────────┐
-│                  FastAPI Backend (Python 3.11)               │
-│  ┌───────────────────────┐          ┌─────────────────────┐  │
-│  │ DeyeCollector         │          │ DtekScheduleManager │  │
-│  │ (Modbus Telemetry)    │          │ (Schedule Parser)   │  │
-│  └───────────┬───────────┘          └──────────┬──────────┘  │
-│              └─────────────────┬───────────────┘             │
-│                                ▼                             │
-│                     SQLite Database (Local)                  │
-└────────────────────────────────┬─────────────────────────────┘
-│
-▼ (Protected Session REST API)
-┌──────────────────────────────────────────────────────────────┐
-│                 Frontend Client (HTML5 / Vanilla CSS / ES6)  │
-│   • Live Power Flow Animation • Dynamic BMS Gauge • DTEK Bar │
-└──────────────────────────────────────────────────────────────┘
 
+\\mermaid
+graph TD
+    subgraph Sources [Hardware & APIs]
+        INV[Deye Inverter<br/>RS485 / Modbus TCP]
+        DTEK[DTEK API<br/>Schedules & Subgroups]
+    end
 
+    subgraph Backend [FastAPI Backend Engine]
+        COL[DeyeCollector<br/>Read-Only Polling]
+        PARSER[DtekManager<br/>Schedule Parser]
+        DB[(SQLite DB<br/>Events & Settings)]
+        AUTH[Cookie Session Auth<br/>/login & /settings]
+        
+        INV -->|Read Registers| COL
+        DTEK -->|HTTP Fetch| PARSER
+        COL --> DB
+        PARSER --> DB
+    end
+
+    subgraph Frontend [Web Client]
+        UI[Dashboard /index.html<br/>Live Flows, SOH, Gauges]
+        ADMIN[Admin Panel /settings<br/>Live Modbus Config]
+    end
+
+    AUTH --> UI
+    AUTH --> ADMIN
+    COL -->|JSON Telemetry| UI
+    PARSER -->|Timeline Data| UI
+\
 ---
 
 ## 🔒 Security & Authentication
 
-- **Cookie-Based Session Protection:** The entire dashboard (`/`) and administrative configuration panel (`/settings`) are guarded behind a dedicated login route (`/login`).
-- **HTTP-Only Session Cookies:** Uses secure `deye_session` HTTP-only cookies to eliminate risks associated with client-side token storage (XSS protection).
-- **In-App Credential Management:** Modify admin username and password directly within the settings view without manual `.env` file editing.
-- **Zero Exposed Secrets:** Telegram credentials, local secrets, and databases are strictly excluded from version control via `.gitignore`.
+- **Cookie-Based Session Protection:** The entire dashboard (/) and administrative configuration panel (/settings) are guarded behind a dedicated login route (/login).
+- **HTTP-Only Session Cookies:** Uses secure deye_session HTTP-only cookies to eliminate risks associated with client-side token storage (XSS protection).
+- **In-App Credential Management:** Modify admin username and password directly within the settings view without manual .env file editing.
+- **Zero Exposed Secrets:** Telegram credentials, local secrets, and databases are strictly excluded from version control via .gitignore.
 
 ---
 
@@ -69,7 +76,8 @@ A production-grade real-time web monitoring and automation system for **Deye Hyb
 - **Backend:** Python 3.11+, FastAPI, Uvicorn, SQLite, PyModbus, PySerial, HTTPX, Pydantic v2.
 - **Frontend:** HTML5, Modern CSS (Glassmorphism styling, CSS custom properties, responsive flex/grid layouts), Vanilla JavaScript (ES6+).
 - **Storage:** SQLite3 local database.
-- **Deployment:** Docker & Docker Compose, Windows PowerShell automation scripts (`run.ps1`).
+- **Deployment:** Docker & Docker Compose, Windows PowerShell automation scripts (
+un.ps1).
 
 ---
 
@@ -78,66 +86,72 @@ A production-grade real-time web monitoring and automation system for **Deye Hyb
 ### Local Startup on Windows (PowerShell)
 Run the automated environment bootstrap and server startup script:
 
-```powershell
+\\powershell
 .\run.ps1
-Manual Local Startup (Linux / macOS / Windows)
-Clone the repository:
+\
+### Manual Local Startup (Linux / macOS / Windows)
 
-Bash
-git clone [https://github.com/your-username/invertorweb.git](https://github.com/your-username/invertorweb.git)
-cd invertorweb
-Create and activate a virtual environment:
+1. **Clone the repository:**
+   \\ash
+   git clone https://github.com/your-username/invertorweb.git
+   cd invertorweb
+   \
+2. **Create and activate a virtual environment:**
+   \\ash
+   python -m venv venv
+   # On Windows (PowerShell):
+   .\venv\Scripts\Activate.ps1
+   # On Linux/macOS:
+   source venv/bin/activate
+   \
+3. **Install project dependencies:**
+   \\ash
+   pip install -r requirements.txt
+   \
+4. **Prepare environment configuration:**
+   \\ash
+   cp .env.example .env
+   \
+5. **Launch the application:**
+   \\ash
+   python -m backend.main
+   \
+6. **Access the dashboard:**
+   Open \http://localhost:8000\ in your browser. Default login credentials:
+   - **Username:** \dmin   - **Password:** \dmin
+---
 
-Bash
-python -m venv venv
-# On Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
-# On Linux/macOS:
-source venv/bin/activate
-Install project dependencies:
+## 🐳 Docker Deployment
 
-Bash
-pip install -r requirements.txt
-Prepare environment configuration:
-
-Bash
-cp .env.example .env
-Launch the application:
-
-Bash
-python -m backend.main
-Access the dashboard:
-Open http://localhost:8000 in your browser. Default login credentials:
-
-Username: admin
-
-Password: admin
-
-🐳 Docker Deployment
 Run the complete stack in a detached container via Docker Compose:
 
-Bash
+\\ash
 docker compose up -d --build
+\
 View live server logs:
-
-Bash
+\\ash
 docker compose logs -f
+\
 Shut down containers:
-
-Bash
+\\ash
 docker compose down
-🎮 Demo & Simulation Mode
+\
+---
+
+## 🎮 Demo & Simulation Mode
+
 When physical hardware is not linked, run the system in simulated mode:
+- Set \DEMO_MODE=True\ via \.env\ or enable it inside \/settings\.
+- The background telemetry engine models fluctuating consumption, battery charge/discharge dynamics, and grid stability.
+- Use the **"⚡ Мережа"** toggle switch in the dashboard header or appliance buttons (Fridge / Kettle) to simulate power failure scenarios, trigger alarm sounds, and generate outage log entries in real time.
 
-Set DEMO_MODE=True via .env or enable it inside /settings.
+---
 
-The background telemetry engine models fluctuating consumption, battery charge/discharge dynamics, and grid stability.
+## ⚙️ Configuration (\.env\)
 
-Use the "⚡ Мережа" toggle switch in the dashboard header or appliance buttons (Fridge / Kettle) to simulate power failure scenarios, trigger alarm sounds, and generate outage log entries in real time.
+Default variables defined in \.env\:
 
-⚙️ Configuration (.env)
-Default variables defined in .env:
-
+\\env
 # Server bind address
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8000
@@ -172,12 +186,17 @@ MODBUS_TCP_PORT=502
 MODBUS_PORT=COM3          # Serial interface (e.g., COM3 or /dev/ttyUSB0)
 MODBUS_BAUDRATE=9600
 MODBUS_SLAVE_ID=1
-🛡️ Security Audit & Repository Hygiene
-No hardcoded access tokens, external endpoints, or credentials exist in tracked files.
+\
+---
 
-Real .env configuration files and runtime SQLite databases (*.db, *.sqlite3) are isolated via .gitignore.
+## 🛡️ Security Audit & Repository Hygiene
 
-Modbus commands are strictly restricted to reading registers to eliminate any hardware write hazard.
+- No hardcoded access tokens, external endpoints, or credentials exist in tracked files.
+- Real \.env\ configuration files and runtime SQLite databases (\*.db\, \*.sqlite3\) are isolated via \.gitignore\.
+- Modbus commands are strictly restricted to reading registers to eliminate any hardware write hazard.
 
-📄 License
-Distributed under the MIT License. See LICENSE for details.
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See \LICENSE\ for details.
