@@ -29,3 +29,155 @@ A production-grade real-time web monitoring and automation system for **Deye Hyb
 ---
 
 ## 🏗️ System Architecture
+┌─────────────────────────┐         ┌──────────────────────────┐
+│  Deye Inverter Hardware │         │ DTEK Outage Schedule API │
+│  (Modbus RTU / TCP)     │         │ (Regional / Custom JSON) │
+└────────────┬────────────┘         └─────────────┬────────────┘
+│ (RS485 / TCP - Read-Only)          │ (HTTP GET)
+▼                                    ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  FastAPI Backend (Python 3.11)               │
+│  ┌───────────────────────┐          ┌─────────────────────┐  │
+│  │ DeyeCollector         │          │ DtekScheduleManager │  │
+│  │ (Modbus Telemetry)    │          │ (Schedule Parser)   │  │
+│  └───────────┬───────────┘          └──────────┬──────────┘  │
+│              └─────────────────┬───────────────┘             │
+│                                ▼                             │
+│                     SQLite Database (Local)                  │
+└────────────────────────────────┬─────────────────────────────┘
+│
+▼ (Protected Session REST API)
+┌──────────────────────────────────────────────────────────────┐
+│                 Frontend Client (HTML5 / Vanilla CSS / ES6)  │
+│   • Live Power Flow Animation • Dynamic BMS Gauge • DTEK Bar │
+└──────────────────────────────────────────────────────────────┘
+
+
+---
+
+## 🔒 Security & Authentication
+
+- **Cookie-Based Session Protection:** The entire dashboard (`/`) and administrative configuration panel (`/settings`) are guarded behind a dedicated login route (`/login`).
+- **HTTP-Only Session Cookies:** Uses secure `deye_session` HTTP-only cookies to eliminate risks associated with client-side token storage (XSS protection).
+- **In-App Credential Management:** Modify admin username and password directly within the settings view without manual `.env` file editing.
+- **Zero Exposed Secrets:** Telegram credentials, local secrets, and databases are strictly excluded from version control via `.gitignore`.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Backend:** Python 3.11+, FastAPI, Uvicorn, SQLite, PyModbus, PySerial, HTTPX, Pydantic v2.
+- **Frontend:** HTML5, Modern CSS (Glassmorphism styling, CSS custom properties, responsive flex/grid layouts), Vanilla JavaScript (ES6+).
+- **Storage:** SQLite3 local database.
+- **Deployment:** Docker & Docker Compose, Windows PowerShell automation scripts (`run.ps1`).
+
+---
+
+## 🚀 Quick Start
+
+### Local Startup on Windows (PowerShell)
+Run the automated environment bootstrap and server startup script:
+
+```powershell
+.\run.ps1
+Manual Local Startup (Linux / macOS / Windows)
+Clone the repository:
+
+Bash
+git clone [https://github.com/your-username/invertorweb.git](https://github.com/your-username/invertorweb.git)
+cd invertorweb
+Create and activate a virtual environment:
+
+Bash
+python -m venv venv
+# On Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# On Linux/macOS:
+source venv/bin/activate
+Install project dependencies:
+
+Bash
+pip install -r requirements.txt
+Prepare environment configuration:
+
+Bash
+cp .env.example .env
+Launch the application:
+
+Bash
+python -m backend.main
+Access the dashboard:
+Open http://localhost:8000 in your browser. Default login credentials:
+
+Username: admin
+
+Password: admin
+
+🐳 Docker Deployment
+Run the complete stack in a detached container via Docker Compose:
+
+Bash
+docker compose up -d --build
+View live server logs:
+
+Bash
+docker compose logs -f
+Shut down containers:
+
+Bash
+docker compose down
+🎮 Demo & Simulation Mode
+When physical hardware is not linked, run the system in simulated mode:
+
+Set DEMO_MODE=True via .env or enable it inside /settings.
+
+The background telemetry engine models fluctuating consumption, battery charge/discharge dynamics, and grid stability.
+
+Use the "⚡ Мережа" toggle switch in the dashboard header or appliance buttons (Fridge / Kettle) to simulate power failure scenarios, trigger alarm sounds, and generate outage log entries in real time.
+
+⚙️ Configuration (.env)
+Default variables defined in .env:
+
+# Server bind address
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8000
+DEBUG=false
+
+# Authentication defaults
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin
+
+# Simulation Mode (Set False for real Modbus connection)
+DEMO_MODE=True
+
+# Telegram Notifications
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+TELEGRAM_CHAT_ID=your_telegram_chat_id_here
+TELEGRAM_NOTIFICATIONS_ENABLED=True
+
+# DTEK Outage Schedule Settings
+DTEK_REGION=kyiv          # Options: kyiv, kyiv_region, dnipro, odesa, custom
+DTEK_GROUP=3              # Groups: 1-6 (or subgroups 1.1-6.2 for kyiv_region)
+
+# Battery Parameters (LiFePO4 Fallback)
+BATTERY_CAPACITY_WH=5120
+BATTERY_MIN_SOC=15
+LOW_BATTERY_ALERT_SOC=20
+
+# Deye Modbus Hardware Interface (Read-Only)
+MODBUS_ENABLED=False
+MODBUS_TYPE=tcp           # Options: tcp, rtu
+MODBUS_HOST=192.168.1.150
+MODBUS_TCP_PORT=502
+MODBUS_PORT=COM3          # Serial interface (e.g., COM3 or /dev/ttyUSB0)
+MODBUS_BAUDRATE=9600
+MODBUS_SLAVE_ID=1
+🛡️ Security Audit & Repository Hygiene
+No hardcoded access tokens, external endpoints, or credentials exist in tracked files.
+
+Real .env configuration files and runtime SQLite databases (*.db, *.sqlite3) are isolated via .gitignore.
+
+Modbus commands are strictly restricted to reading registers to eliminate any hardware write hazard.
+
+📄 License
+Distributed under the MIT License. See LICENSE for details.
